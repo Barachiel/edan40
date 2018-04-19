@@ -120,18 +120,24 @@ match _ [] [] = Just []
 match _ [] _ = Nothing
 match _ _ [] = Nothing
 match a (x:xs) (y:ys)
-  |
-
+  | x == y = match a xs ys
+  | x == a = orElse (singleWildcardMatch (x:xs) (y:ys)) (longerWildcardMatch (x:xs) (y:ys))
+  | otherwise = Nothing
 {- TO BE WRITTEN -}
 
 
 -- Helper function to match --
 singleWildcardMatch, longerWildcardMatch :: Eq a => [a] -> [a] -> Maybe [a]
-singleWildcardMatch (wc:ps) (x:xs) = Nothing
-{- TO BE WRITTEN -}
-longerWildcardMatch (wc:ps) (x:xs) = Nothing
-{- TO BE WRITTEN -}
 
+singleWildcardMatch (wc:ps) (x:xs)
+  | match wc ps xs == (Just []) = Just [x]
+  | otherwise = Nothing
+
+{- TO BE WRITTEN -}
+longerWildcardMatch (wc:ps) (x:xs)
+  | match wc (wc:ps) xs /= Nothing = mmap ([x] ++) (match wc (wc:ps) xs)
+  | otherwise = Nothing
+{- TO BE WRITTEN -}
 
 
 -- Test cases --------------------
