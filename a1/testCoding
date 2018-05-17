@@ -1,0 +1,4 @@
+match :: Eq a => a -> [a] -> [a] -> Maybe [a]
+match wc (k:key) (s:ss)
+  | k == s = match wc key ss
+  | k == wc = 

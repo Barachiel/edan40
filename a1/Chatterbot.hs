@@ -2,6 +2,7 @@ module Chatterbot where
 import Utilities
 import System.Random
 import Data.Char
+import Data.Maybe
 
 chatterbot :: String -> [(String, [String])] -> IO ()
 chatterbot botName botRules = do
@@ -25,17 +26,29 @@ type BotBrain = [(Phrase, [Phrase])]
 
 --------------------------------------------------------
 
+
+
 stateOfMind :: BotBrain -> IO (Phrase -> Phrase)
-{- TO BE WRITTEN -}
-stateOfMind _ = return id
+stateOfMind brain = do
+  r <- randomIO :: IO Float
+  return (rulesApply (pairExtract brain r))
+
+pairExtract:: BotBrain -> Float-> [PhrasePair]
+pairExtract [] _ = []
+pairExtract (brainBit:brainBits) r = ((fst brainBit), (pick r (snd brainBit))):pairExtract brainBits r
+
 
 rulesApply :: [PhrasePair] -> Phrase -> Phrase
-{- TO BE WRITTEN -}
-rulesApply _ = id
+rulesApply l c
+  | transformationsApply "*" reflect l c == Nothing = []
+  | otherwise = try (transformationsApply "*" reflect l) c
 
 reflect :: Phrase -> Phrase
-{- TO BE WRITTEN -}
-reflect = id
+reflect [] = []
+reflect (x:xs)
+  | lookup x reflections /= Nothing = (fromJust( (lookup x) reflections)) : reflect xs
+  | otherwise = x:reflect xs
+
 
 reflections =
   [ ("am",     "are"),
@@ -69,8 +82,8 @@ prepare :: String -> Phrase
 prepare = reduce . words . map toLower . filter (not . flip elem ".,:;*!#%&|")
 
 rulesCompile :: [(String, [String])] -> BotBrain
-{- TO BE WRITTEN -}
-rulesCompile _ = []
+rulesCompile p = (map . map2) (lowerWords, (map lowerWords)) p
+                where lowerWords = words . map toLower
 
 
 --------------------------------------
@@ -95,8 +108,9 @@ reduce :: Phrase -> Phrase
 reduce = reductionsApply reductions
 
 reductionsApply :: [PhrasePair] -> Phrase -> Phrase
-{- TO BE WRITTEN -}
-reductionsApply _ = id
+reductionsApply pp p
+  | transformationsApply "*" id pp p /= Nothing = fix (try (transformationsApply "*" id pp)) p
+  | otherwise = p
 
 
 -------------------------------------------------------
@@ -110,7 +124,6 @@ substitute a (x:xs) b
   | a == x = b ++ substitute a xs b
   | otherwise = x : substitute a xs b
 
-{- TO BE WRITTEN -}
 
 
 -- Tries to match two lists. If they match, the result consists of the sublist
@@ -120,24 +133,20 @@ match _ [] [] = Just []
 match _ [] _ = Nothing
 match _ _ [] = Nothing
 match a (x:xs) (y:ys)
-  | x == y = match a xs ys
   | x == a = orElse (singleWildcardMatch (x:xs) (y:ys)) (longerWildcardMatch (x:xs) (y:ys))
+  | x == y = match a xs ys
   | otherwise = Nothing
-{- TO BE WRITTEN -}
 
 
 -- Helper function to match --
 singleWildcardMatch, longerWildcardMatch :: Eq a => [a] -> [a] -> Maybe [a]
-
-singleWildcardMatch (wc:ps) (x:xs)
-  | match wc ps xs == (Just []) = Just [x]
+singleWildcardMatch (wc:wc_rest) (s:s_rest)
+  | match wc wc_rest s_rest /= Nothing = Just [s]
   | otherwise = Nothing
 
-{- TO BE WRITTEN -}
 longerWildcardMatch (wc:ps) (x:xs)
   | match wc (wc:ps) xs /= Nothing = mmap ([x] ++) (match wc (wc:ps) xs)
   | otherwise = Nothing
-{- TO BE WRITTEN -}
 
 
 -- Test cases --------------------
@@ -160,11 +169,12 @@ matchCheck = matchTest == Just testSubstitutions
 
 -- Applying a single pattern
 transformationApply :: Eq a => a -> ([a] -> [a]) -> [a] -> ([a], [a]) -> Maybe [a]
-transformationApply _ _ _ _ = Nothing
-{- TO BE WRITTEN -}
+transformationApply a f x (y,z) = mmap (substitute a z)  (mmap f (match a y x))
 
 
 -- Applying a list of patterns until one succeeds
 transformationsApply :: Eq a => a -> ([a] -> [a]) -> [([a], [a])] -> [a] -> Maybe [a]
-transformationsApply _ _ _ _ = Nothing
-{- TO BE WRITTEN -}
+transformationsApply _ _ [] _ = Nothing
+transformationsApply a b (z:zs) x
+  | transformationApply a b x z == Nothing = (transformationsApply a b zs x)
+  | otherwise = (transformationApply a b x z)
